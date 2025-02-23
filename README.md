@@ -173,7 +173,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Authors
 
-- Your Name <mail.owhab@gmail.com>
+- Abdul Owhab <mail.owhab@gmail.com>
 
 ## Acknowledgments
 
