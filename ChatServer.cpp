@@ -1,11 +1,55 @@
 #include "ChatServer.hpp"
+#include "ConsoleUtils.hpp"
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <map>
+#include <sstream>
+
+// Client information structure
+struct ClientInfo
+{
+    std::string username;
+    socket_t socket;
+};
+
+// Global map to store client info
+std::map<socket_t, std::string> clientUsernames;
+
+#ifdef _WIN32
+bool ChatServer::initializeWinsock()
+{
+    WSADATA wsaData;
+    return WSAStartup(MAKEWORD(2, 2), &wsaData) == 0;
+}
+#endif
 
 ChatServer::ChatServer(int port)
 {
+#ifdef _WIN32
+    if (!initializeWinsock())
+    {
+        std::cerr << "Failed to initialize Winsock\n";
+        exit(1);
+    }
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket == INVALID_SOCKET)
+    {
+        std::cerr << "Socket creation failed with error: " << WSAGetLastError() << std::endl;
+        WSACleanup();
+        exit(1);
+    }
+#else
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket < 0)
+    {
+        std::cerr << RED_COLOR BOLD_TEXT "Socket creation failed" RESET_COLOR << std::endl;
+        exit(1);
+    }
+#endif
+
+    // Initialize console colors
+    initConsoleColors();
 
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
@@ -13,11 +57,45 @@ ChatServer::ChatServer(int port)
     serverAddr.sin_addr.s_addr = INADDR_ANY;
 
     // Allow reuse of address
+#ifdef _WIN32
+    char opt = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#else
     int opt = 1;
     setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#endif
 
-    bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr));
-    listen(serverSocket, SOMAXCONN);
+#ifdef _WIN32
+    if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    {
+        std::cerr << "Bind failed with error: " << WSAGetLastError() << std::endl;
+        closesocket(serverSocket);
+        WSACleanup();
+        exit(1);
+    }
+
+    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
+    {
+        std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
+        closesocket(serverSocket);
+        WSACleanup();
+        exit(1);
+    }
+#else
+    if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
+    {
+        std::cerr << RED_COLOR BOLD_TEXT "Bind failed" RESET_COLOR << std::endl;
+        close(serverSocket);
+        exit(1);
+    }
+
+    if (listen(serverSocket, SOMAXCONN) < 0)
+    {
+        std::cerr << RED_COLOR BOLD_TEXT "Listen failed" RESET_COLOR << std::endl;
+        close(serverSocket);
+        exit(1);
+    }
+#endif
 
     running = false;
 }
@@ -30,49 +108,114 @@ ChatServer::~ChatServer()
 void ChatServer::start()
 {
     running = true;
-    std::cout << "Server started. Waiting for connections...\n";
+    std::cout << FORMAT_SYSTEM_MESSAGE("Server started. Waiting for connections...") << std::endl;
 
     while (running)
     {
-        int clientSocket = accept(serverSocket, nullptr, nullptr);
+#ifdef _WIN32
+        socket_t clientSocket = accept(serverSocket, nullptr, nullptr);
+        if (clientSocket != INVALID_SOCKET)
+#else
+        socket_t clientSocket = accept(serverSocket, nullptr, nullptr);
         if (clientSocket >= 0)
+#endif
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clientSockets.push_back(clientSocket);
+            std::cout << BLUE_COLOR << "New client connected. Socket ID: " << clientSocket << RESET_COLOR << std::endl;
             std::thread(&ChatServer::handleClient, this, clientSocket).detach();
         }
     }
 }
 
-void ChatServer::handleClient(int clientSocket)
+void ChatServer::handleClient(socket_t clientSocket)
 {
     char buffer[1024];
+
+    // First message from client should be username
+#ifdef _WIN32
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+    if (bytesReceived <= 0)
+    {
+        return;
+    }
+#else
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+    if (bytesReceived <= 0)
+    {
+        return;
+    }
+#endif
+
+    std::string username(buffer, bytesReceived);
+    clientUsernames[clientSocket] = username;
+    std::string joinMessage = "SERVER:" + username + " joined the chat";
+
+    // Add to chat history and notify others
+    chatHistory.push_back(joinMessage);
+    broadcastMessage(joinMessage, clientSocket);
+
+    std::cout << FORMAT_USER_JOIN(username) << std::endl;
+
+    // Handle other messages
     while (running)
     {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+#ifdef _WIN32
+        bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0)
+#else
+        bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived <= 0)
+#endif
         {
             break;
         }
 
-        std::string message(buffer, bytesReceived);
-        chatHistory.push_back(message);
-        broadcastMessage(message, clientSocket);
+        std::string messageContent(buffer, bytesReceived);
+        std::string formattedMessage = username + ":" + messageContent;
+
+        // Log the message to server console
+        std::cout << CYAN_COLOR << "[" << username << "]: " << RESET_COLOR << messageContent << std::endl;
+
+        // Save to chat history
+        chatHistory.push_back(formattedMessage);
+
+        // Send to other clients
+        broadcastMessage(formattedMessage, clientSocket);
     }
 
-    std::lock_guard<std::mutex> lock(clientsMutex);
-    auto it = std::find(clientSockets.begin(), clientSockets.end(), clientSocket);
-    if (it != clientSockets.end())
+    // Handle client disconnect
     {
-        clientSockets.erase(it);
+        std::lock_guard<std::mutex> lock(clientsMutex);
+        auto it = std::find(clientSockets.begin(), clientSockets.end(), clientSocket);
+        if (it != clientSockets.end())
+        {
+            clientSockets.erase(it);
+        }
     }
+
+    // Get username before removing from map
+    std::string disconnectedUsername = clientUsernames[clientSocket];
+    std::string leaveMessage = "SERVER:" + disconnectedUsername + " left the chat";
+    clientUsernames.erase(clientSocket);
+
+    // Broadcast that user has left
+    chatHistory.push_back(leaveMessage);
+    broadcastMessage(leaveMessage, SOCKET_ERROR_VAL);
+
+    std::cout << FORMAT_USER_LEAVE(disconnectedUsername) << std::endl;
+
+#ifdef _WIN32
+    closesocket(clientSocket);
+#else
     close(clientSocket);
+#endif
 }
 
-void ChatServer::broadcastMessage(const std::string &message, int sender)
+void ChatServer::broadcastMessage(const std::string &message, socket_t sender)
 {
     std::lock_guard<std::mutex> lock(clientsMutex);
-    for (int client : clientSockets)
+    for (socket_t client : clientSockets)
     {
         if (client != sender)
         {
@@ -84,9 +227,23 @@ void ChatServer::broadcastMessage(const std::string &message, int sender)
 void ChatServer::stop()
 {
     running = false;
-    for (int client : clientSockets)
+    std::cout << FORMAT_SYSTEM_MESSAGE("Shutting down server...") << std::endl;
+
+    for (socket_t client : clientSockets)
     {
+#ifdef _WIN32
+        closesocket(client);
+#else
         close(client);
+#endif
     }
+    clientSockets.clear();
+    clientUsernames.clear();
+
+#ifdef _WIN32
+    closesocket(serverSocket);
+    WSACleanup();
+#else
     close(serverSocket);
+#endif
 }
