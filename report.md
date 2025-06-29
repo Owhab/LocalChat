@@ -702,7 +702,7 @@ The LocalChat system stands as both a functional emergency communication tool an
 - **Title:** LocalChat - Emergency Communication System  
 - **Developer:** Abdul Owhab  
 - **Course:** SDP-1 (Software Development Project - 1)  
-- **Institution:** [University Name]  
+- **Institution:** Bangladesh University of Business and Technology  
 - **Date:** June 2025  
 - **Project Duration:** 6 weeks  
 - **Programming Language:** C++ (C++11 Standard)  
