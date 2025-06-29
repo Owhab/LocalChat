@@ -51,11 +51,6 @@ ChatServer::ChatServer(int port)
     // Initialize console colors
     initConsoleColors();
 
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-
     // Allow reuse of address
 #ifdef _WIN32
     char opt = 1;
@@ -65,15 +60,72 @@ ChatServer::ChatServer(int port)
     setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #endif
 
-#ifdef _WIN32
-    if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    // Try to bind to the requested port, if fails try alternative ports
+    int currentPort = port;
+    bool bindSuccessful = false;
+
+    for (int attempt = 0; attempt < 10; attempt++)
     {
-        std::cerr << "Bind failed with error: " << WSAGetLastError() << std::endl;
+        sockaddr_in serverAddr;
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(currentPort);
+        serverAddr.sin_addr.s_addr = INADDR_ANY;
+
+#ifdef _WIN32
+        if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) == 0)
+        {
+            bindSuccessful = true;
+            break;
+        }
+        else
+        {
+            if (attempt == 0)
+            {
+                std::cout << YELLOW_COLOR "Port " << currentPort << " is already in use, trying alternative ports..." RESET_COLOR << std::endl;
+            }
+            currentPort++;
+        }
+#else
+        if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) == 0)
+        {
+            bindSuccessful = true;
+            break;
+        }
+        else
+        {
+            if (attempt == 0)
+            {
+                std::cout << YELLOW_COLOR "Port " << currentPort << " is already in use, trying alternative ports..." RESET_COLOR << std::endl;
+            }
+            currentPort++;
+        }
+#endif
+    }
+
+    if (!bindSuccessful)
+    {
+        std::cerr << RED_COLOR BOLD_TEXT "Failed to bind to any port from " << port << " to " << (port + 9) << RESET_COLOR << std::endl;
+        std::cerr << YELLOW_COLOR "Solutions:" RESET_COLOR << std::endl;
+        std::cerr << "1. Kill any existing server process: " CYAN_COLOR "pkill -f server" RESET_COLOR << std::endl;
+        std::cerr << "2. Wait a moment and try again" << std::endl;
+        std::cerr << "3. Restart your terminal/computer" << std::endl;
+#ifdef _WIN32
         closesocket(serverSocket);
         WSACleanup();
+#else
+        close(serverSocket);
+#endif
         exit(1);
     }
 
+    // Update the port if we had to use an alternative
+    if (currentPort != port)
+    {
+        std::cout << GREEN_COLOR "Successfully bound to alternative port: " << currentPort << RESET_COLOR << std::endl;
+        std::cout << YELLOW_COLOR "Clients should connect to port " << currentPort << " instead of " << port << RESET_COLOR << std::endl;
+    }
+
+#ifdef _WIN32
     if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
     {
         std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
@@ -82,13 +134,6 @@ ChatServer::ChatServer(int port)
         exit(1);
     }
 #else
-    if (bind(serverSocket, (sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
-    {
-        std::cerr << RED_COLOR BOLD_TEXT "Bind failed" RESET_COLOR << std::endl;
-        close(serverSocket);
-        exit(1);
-    }
-
     if (listen(serverSocket, SOMAXCONN) < 0)
     {
         std::cerr << RED_COLOR BOLD_TEXT "Listen failed" RESET_COLOR << std::endl;

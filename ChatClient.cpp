@@ -112,11 +112,14 @@ void ChatClient::receiveMessages()
                 {
                     std::cout << FORMAT_SYSTEM_MESSAGE(messageContent) << std::endl;
                 }
+                // Add separator line after system messages
+                std::cout << createSeparator() << std::endl;
             }
             else
             {
-                // Regular message from another user
-                std::cout << FORMAT_RECEIVED_MESSAGE(username, messageContent) << std::endl;
+                // Regular message from another user with colorful border
+                std::cout << formatReceivedMessage(username, messageContent) << std::endl;
+                std::cout << createSeparator() << std::endl;
             }
         }
         else
@@ -134,9 +137,9 @@ void ChatClient::sendMessage(const std::string &message)
     // No need to format here since it will be formatted when echoed back
     send(clientSocket, message.c_str(), message.length(), 0);
 
-    // Optional: Also display the message locally with styling
-    // This is useful if the server doesn't echo messages back to sender
+    // Display the message locally with styling and border
     std::cout << FORMAT_SENT_MESSAGE("You", message) << std::endl;
+    std::cout << createSeparator() << std::endl;
 }
 
 void ChatClient::disconnect()
