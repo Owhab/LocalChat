@@ -456,7 +456,7 @@ make --version
 
 **Step 1: Download Source Code**
 ```bash
-git clone git@github.com:Owhab/LocalChat.git
+git clone https://github.com/Owhab/LocalChat.git
 cd LocalChat
 ```
 
@@ -710,4 +710,4 @@ The LocalChat system stands as both a functional emergency communication tool an
 
 **Contact Information:**
 - **Email:** mail.owhab@gmail.com
-- **GitHub:** [Repository URL]
+- **GitHub:** [[Repository URL](https://github.com/Owhab/LocalChat.git)]

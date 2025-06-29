@@ -52,7 +52,7 @@ sudo apt-get install build-essential g++ make git
 
 1. **Clone the repository**
 ```bash
-git clone git@github.com:Owhab/LocalChat.git
+git clone https://github.com/Owhab/LocalChat.git
 cd LocalChat
 ```
 
