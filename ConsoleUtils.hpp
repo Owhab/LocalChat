@@ -6,25 +6,26 @@
 // Cross-platform console colors and formatting
 #ifdef _WIN32
 #include <windows.h>
-#define RESET_COLOR ""
-#define RED_COLOR ""
-#define GREEN_COLOR ""
-#define BLUE_COLOR ""
-#define YELLOW_COLOR ""
-#define MAGENTA_COLOR ""
-#define CYAN_COLOR ""
-#define WHITE_COLOR ""
-#define BRIGHT_RED_COLOR ""
-#define BRIGHT_GREEN_COLOR ""
-#define BRIGHT_BLUE_COLOR ""
-#define BRIGHT_YELLOW_COLOR ""
-#define BRIGHT_MAGENTA_COLOR ""
-#define BRIGHT_CYAN_COLOR ""
-#define BRIGHT_WHITE_COLOR ""
-#define BOLD_TEXT ""
-#define ITALIC_TEXT ""
-#define UNDERLINE_TEXT ""
-#define DIM_TEXT ""
+// ANSI escape codes for Windows (with virtual terminal processing)
+#define RESET_COLOR "\033[0m"
+#define RED_COLOR "\033[31m"
+#define GREEN_COLOR "\033[32m"
+#define BLUE_COLOR "\033[34m"
+#define YELLOW_COLOR "\033[33m"
+#define MAGENTA_COLOR "\033[35m"
+#define CYAN_COLOR "\033[36m"
+#define WHITE_COLOR "\033[37m"
+#define BRIGHT_RED_COLOR "\033[91m"
+#define BRIGHT_GREEN_COLOR "\033[92m"
+#define BRIGHT_BLUE_COLOR "\033[94m"
+#define BRIGHT_YELLOW_COLOR "\033[93m"
+#define BRIGHT_MAGENTA_COLOR "\033[95m"
+#define BRIGHT_CYAN_COLOR "\033[96m"
+#define BRIGHT_WHITE_COLOR "\033[97m"
+#define BOLD_TEXT "\033[1m"
+#define ITALIC_TEXT "\033[3m"
+#define UNDERLINE_TEXT "\033[4m"
+#define DIM_TEXT "\033[2m"
 
 // Windows console color initialization function
 inline void initConsoleColors()
@@ -59,9 +60,8 @@ inline void initConsoleColors()
 
 // No initialization needed for Linux/macOS
 inline void initConsoleColors() {}
-#endif
 
-// Border characters and styles
+// Border characters and styles for Linux/macOS (Unicode box-drawing)
 #define TOP_LEFT_CORNER "┌"
 #define TOP_RIGHT_CORNER "┐"
 #define BOTTOM_LEFT_CORNER "└"
@@ -69,6 +69,36 @@ inline void initConsoleColors() {}
 #define HORIZONTAL_LINE "─"
 #define VERTICAL_LINE "│"
 #define BORDER_PADDING "  "
+#define SYSTEM_BOX_TOP "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+#define SYSTEM_BOX_BOTTOM "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+#define SYSTEM_BOX_SIDE "┃"
+#define JOIN_BOX_TOP "╔══════════════════════════════════════════╗"
+#define JOIN_BOX_BOTTOM "╚══════════════════════════════════════════╝"
+#define JOIN_BOX_SIDE "║"
+#define LEAVE_BOX_TOP "╔══════════════════════════════════════════╗"
+#define LEAVE_BOX_BOTTOM "╚══════════════════════════════════════════╝"
+#define LEAVE_BOX_SIDE "║"
+#endif
+
+#ifdef _WIN32
+// Windows-compatible border characters (ASCII-based)
+#define TOP_LEFT_CORNER "+"
+#define TOP_RIGHT_CORNER "+"
+#define BOTTOM_LEFT_CORNER "+"
+#define BOTTOM_RIGHT_CORNER "+"
+#define HORIZONTAL_LINE "-"
+#define VERTICAL_LINE "|"
+#define BORDER_PADDING "  "
+#define SYSTEM_BOX_TOP "+------------------------------------------+"
+#define SYSTEM_BOX_BOTTOM "+------------------------------------------+"
+#define SYSTEM_BOX_SIDE "|"
+#define JOIN_BOX_TOP "+==========================================+"
+#define JOIN_BOX_BOTTOM "+==========================================+"
+#define JOIN_BOX_SIDE "|"
+#define LEAVE_BOX_TOP "+==========================================+"
+#define LEAVE_BOX_BOTTOM "+==========================================+"
+#define LEAVE_BOX_SIDE "|"
+#endif
 
 // User color assignment system using static local variables to avoid multiple definition
 inline std::string getUserColor(const std::string &username)
@@ -159,48 +189,62 @@ inline std::string createBorderedMessage(const std::string &username, const std:
 // Enhanced message formatting functions
 inline std::string formatSystemMessage(const std::string &msg)
 {
-  std::string result = std::string(YELLOW_COLOR) + "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" + std::string(RESET_COLOR) + "\n";
-  result += std::string(YELLOW_COLOR) + "┃" + std::string(RESET_COLOR) + std::string(BOLD_TEXT) + "  [SYSTEM] " + std::string(RESET_COLOR) + msg;
+  std::string result = std::string(YELLOW_COLOR) + SYSTEM_BOX_TOP + std::string(RESET_COLOR) + "\n";
+  result += std::string(YELLOW_COLOR) + SYSTEM_BOX_SIDE + std::string(RESET_COLOR) + std::string(BOLD_TEXT) + "  [SYSTEM] " + std::string(RESET_COLOR) + msg;
 
   size_t padding = 35;
   if (msg.length() < padding)
   {
     result += std::string(padding - msg.length(), ' ');
   }
-  result += std::string(YELLOW_COLOR) + "┃" + std::string(RESET_COLOR) + "\n";
-  result += std::string(YELLOW_COLOR) + "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛" + std::string(RESET_COLOR);
+  result += std::string(YELLOW_COLOR) + SYSTEM_BOX_SIDE + std::string(RESET_COLOR) + "\n";
+  result += std::string(YELLOW_COLOR) + SYSTEM_BOX_BOTTOM + std::string(RESET_COLOR);
 
   return result;
 }
 
 inline std::string formatUserJoin(const std::string &user)
 {
-  std::string result = std::string(BRIGHT_GREEN_COLOR) + "╔══════════════════════════════════════════╗" + std::string(RESET_COLOR) + "\n";
-  result += std::string(BRIGHT_GREEN_COLOR) + "║" + std::string(RESET_COLOR) + "  🎉 " + std::string(BOLD_TEXT) + user + " joined the chat!" + std::string(RESET_COLOR);
+  std::string result = std::string(BRIGHT_GREEN_COLOR) + JOIN_BOX_TOP + std::string(RESET_COLOR) + "\n";
+
+#ifdef _WIN32
+  // Windows-friendly emoji alternative
+  result += std::string(BRIGHT_GREEN_COLOR) + JOIN_BOX_SIDE + std::string(RESET_COLOR) + "  * " + std::string(BOLD_TEXT) + user + " joined the chat!" + std::string(RESET_COLOR);
+#else
+  // Linux/macOS with emoji support
+  result += std::string(BRIGHT_GREEN_COLOR) + JOIN_BOX_SIDE + std::string(RESET_COLOR) + "  🎉 " + std::string(BOLD_TEXT) + user + " joined the chat!" + std::string(RESET_COLOR);
+#endif
 
   size_t padding = 32;
   if (user.length() < padding)
   {
     result += std::string(padding - user.length(), ' ');
   }
-  result += std::string(BRIGHT_GREEN_COLOR) + "║" + std::string(RESET_COLOR) + "\n";
-  result += std::string(BRIGHT_GREEN_COLOR) + "╚══════════════════════════════════════════╝" + std::string(RESET_COLOR);
+  result += std::string(BRIGHT_GREEN_COLOR) + JOIN_BOX_SIDE + std::string(RESET_COLOR) + "\n";
+  result += std::string(BRIGHT_GREEN_COLOR) + JOIN_BOX_BOTTOM + std::string(RESET_COLOR);
 
   return result;
 }
 
 inline std::string formatUserLeave(const std::string &user)
 {
-  std::string result = std::string(BRIGHT_RED_COLOR) + "╔══════════════════════════════════════════╗" + std::string(RESET_COLOR) + "\n";
-  result += std::string(BRIGHT_RED_COLOR) + "║" + std::string(RESET_COLOR) + "  👋 " + std::string(BOLD_TEXT) + user + " left the chat" + std::string(RESET_COLOR);
+  std::string result = std::string(BRIGHT_RED_COLOR) + LEAVE_BOX_TOP + std::string(RESET_COLOR) + "\n";
+
+#ifdef _WIN32
+  // Windows-friendly emoji alternative
+  result += std::string(BRIGHT_RED_COLOR) + LEAVE_BOX_SIDE + std::string(RESET_COLOR) + "  - " + std::string(BOLD_TEXT) + user + " left the chat" + std::string(RESET_COLOR);
+#else
+  // Linux/macOS with emoji support
+  result += std::string(BRIGHT_RED_COLOR) + LEAVE_BOX_SIDE + std::string(RESET_COLOR) + "  👋 " + std::string(BOLD_TEXT) + user + " left the chat" + std::string(RESET_COLOR);
+#endif
 
   size_t padding = 33;
   if (user.length() < padding)
   {
     result += std::string(padding - user.length(), ' ');
   }
-  result += std::string(BRIGHT_RED_COLOR) + "║" + std::string(RESET_COLOR) + "\n";
-  result += std::string(BRIGHT_RED_COLOR) + "╚══════════════════════════════════════════╝" + std::string(RESET_COLOR);
+  result += std::string(BRIGHT_RED_COLOR) + LEAVE_BOX_SIDE + std::string(RESET_COLOR) + "\n";
+  result += std::string(BRIGHT_RED_COLOR) + LEAVE_BOX_BOTTOM + std::string(RESET_COLOR);
 
   return result;
 }
@@ -221,5 +265,9 @@ inline std::string formatReceivedMessage(const std::string &username, const std:
 // Utility function to print a separator line
 inline std::string createSeparator()
 {
+#ifdef _WIN32
+  return std::string(DIM_TEXT) + "-------------------------------------------------" + std::string(RESET_COLOR);
+#else
   return std::string(DIM_TEXT) + "─────────────────────────────────────────────────" + std::string(RESET_COLOR);
+#endif
 }

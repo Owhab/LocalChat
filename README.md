@@ -47,6 +47,7 @@ sudo apt-get install build-essential g++ make git
 - MinGW-w64 or Visual Studio with C++ support
 - Git for Windows
 - Windows 7 or higher
+- **Note**: For best visual experience on Windows, use Windows Terminal or PowerShell instead of Command Prompt
 
 ## 🚀 Installation & Setup
 
@@ -72,6 +73,8 @@ make client
 ls -la server client  # Linux
 dir server.exe client.exe  # Windows
 ```
+
+**Windows Users**: If you see special characters instead of borders, try using Windows Terminal or PowerShell for better Unicode support.
 
 ## 💬 Usage
 
@@ -178,6 +181,23 @@ netstat -an | findstr 12345  # Windows
 - Verify firewall allows port 12345
 - Ensure server is running before connecting clients
 - Check network connectivity between devices
+
+### Windows Display Issues
+If you see strange characters instead of nice borders on Windows:
+
+1. **Use Windows Terminal** (recommended):
+   - Download from Microsoft Store
+   - Better Unicode and color support
+   
+2. **Use PowerShell** instead of Command Prompt:
+   - Right-click Start button → Windows PowerShell
+   
+3. **Enable UTF-8 in Command Prompt**:
+   ```cmd
+   chcp 65001
+   ```
+
+4. **Alternative**: The application automatically falls back to ASCII characters on Windows for compatibility
 
 ## 🔮 Future Enhancements
 
