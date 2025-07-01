@@ -1124,11 +1124,3 @@ Port Forwarding: Not required (LAN only)
 - **References**: 20 academic and technical sources
 - **Appendices**: 7 comprehensive sections
 
-**Submission Details:**
-- **Course**: SDP-1 (Software Development Project - 1)
-- **Student**: Abdul Owhab
-- **Student ID**: [Your Student ID]
-- **Institution**: [Your University Name]
-- **Department**: Computer Science and Engineering
-- **Submission Date**: July 1, 2025
-- **Academic Year**: 2024-2025
